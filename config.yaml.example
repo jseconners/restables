@@ -6,7 +6,8 @@
 
 databases:
     connection_name:
-        name: database
-        host: hostname
-        user: username
-        pass: password
+        user: user
+        password: password
+        host: host
+        database: database
+        port: 3306
