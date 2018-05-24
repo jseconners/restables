@@ -1,7 +1,6 @@
 import os
-import json
 import yaml
-from flask import Flask, abort, request, Response, jsonify
+from flask import Flask, abort, jsonify
 import mysql.connector
 
 app = Flask(__name__)
@@ -12,6 +11,7 @@ config = None
 config_file = os.path.join(app.root_path, '..', 'config.yaml')
 with open(config_file, 'r') as cfg_file:
     config = yaml.load(cfg_file)
+
 
 @app.route('/')
 def welcome():
@@ -34,6 +34,7 @@ def db_info(connection):
         res.append(table)
 
     return jsonify(res)
+
 
 @app.route('/<connection>/<table>', methods=['GET'])
 def table_info(connection, table):
