@@ -1,0 +1,122 @@
+import re
+import csv
+import io
+
+from sqlalchemy import MetaData, create_engine, desc, asc
+from sqlalchemy.sql import select
+from sqlalchemy.engine import reflection
+from sqlalchemy import Table, func
+
+
+class DBCon:
+
+    DIALECTS = {
+        'mysql': 'mysql+mysqlconnector'
+    }
+
+    def __init__(self, params):
+        self.params = params
+        self.connect_db()
+
+    def connect_db(self):
+        conn_str = "{}://{}:{}@{}:{}/{}"
+        engine = create_engine(conn_str.format(
+            self.DIALECTS[self.params['dialect']],
+            self.params['user'], self.params['password'],
+            self.params['host'], self.params['port'],
+            self.params['database']
+        ))
+        self.engine = engine
+        self.metadata = MetaData(bind=self.engine)
+        self.inspector = reflection.Inspector.from_engine(self.engine)
+        self.connection = engine.connect()
+
+    def get_tables(self):
+        return self.inspector.get_table_names()
+
+    def get_table_count(self, table):
+        table_obj = Table(table, self.metadata, autoload=True)
+        sel = select([func.count()]).select_from(table_obj)
+        records = self.connection.execute(sel)
+        return records.first()[0]
+
+    def get_column_names(self, table):
+        cols = []
+        for c in self.inspector.get_columns(table):
+            cols.append(c['name'])
+        return cols
+
+    def get_columns(self, table, names):
+        table_obj = Table(table, self.metadata, autoload=True)
+        return [getattr(table_obj.c, fn) for fn in names]
+
+    def get_table_data(self, table, fields, opts):
+        sel = self.get_select(table, fields)
+        ordering, limit, offset = self.parse_query_opts(opts)
+
+        if len(ordering):
+            sel = sel.order_by(*ordering)
+        if limit is not None:
+            sel = sel.limit(limit)
+        if offset is not None:
+            sel = sel.offset(offset)
+
+        return self.connection.execute(sel)
+
+    def get_select(self, table, fields):
+        if fields == "*":
+            names = self.get_column_names(table)
+        else:
+            names = [c.strip() for c in fields.split(",")]
+        return select(self.get_columns(table, names))
+
+    def parse_orderby(self, exp):
+        ob_clause = None
+        m = re.search("^(\w+):(a|d)", exp)
+        if m:
+            ob_clause = {'a': asc, 'd': desc}[m.group(2)](m.group(1))
+        return ob_clause
+
+    def parse_limit(self, exp):
+        limit, offset = None, None
+        m = re.search("^limit:(\d+)(:(\d+))?", exp)
+        if m:
+            limit = int(m.group(1))
+            if m.group(3):
+                offset = int(m.group(3))
+        return limit, offset
+
+    def parse_query_opts(self, opts):
+        ordering = []
+        limit, offset = None, None
+        if opts is not None:
+            for op in [op.strip() for op in opts.split(",")]:
+                ob_clause = self.parse_orderby(op)
+                limit, offset = self.parse_limit(op)
+
+                if ob_clause is not None:
+                    ordering.append(ob_clause)
+                    continue
+                if limit is not None:
+                    break
+
+        return (ordering, limit, offset)
+
+
+def row_as_csv(row):
+    ''' Return a csv string from iterable row '''
+    si = io.StringIO()
+    csv.writer(si, quoting=csv.QUOTE_NONNUMERIC).writerow(row)
+    return si.getvalue()
+
+
+def csv_generator(results):
+    '''
+    Create generator for returning csv formatted query results for use
+    in streamed response
+    '''
+    def stream():
+        yield row_as_csv(results.keys())
+        for row in results:
+            yield row_as_csv(row)
+    return stream
