@@ -10,7 +10,7 @@ CONFIG_FILE = os.path.join(app.root_path, '..', 'config.yaml')
 
 @app.before_request
 def load_config():
-    ''' Load app configuration '''
+    """ Load app configuration """
     g._config = None
     with open(CONFIG_FILE, 'r') as cfg_file:
         g._config = yaml.load(cfg_file)

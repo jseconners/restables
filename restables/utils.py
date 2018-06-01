@@ -9,10 +9,11 @@ from sqlalchemy import Table, func
 
 
 class DBCon:
-    '''
+    """
     Database connection object with query and reflection utilities
-    '''
+    """
 
+    # supported dialects
     DIALECTS = {
         'mysql': 'mysql+mysqlconnector'
     }
@@ -22,7 +23,7 @@ class DBCon:
         self.connect_db()
 
     def connect_db(self):
-        ''' Create database connection and associated properties '''
+        """ Create database connection and associated properties """
         conn_str = "{}://{}:{}@{}:{}/{}"
         engine = create_engine(conn_str.format(
             self.DIALECTS[self.params['dialect']],
@@ -36,33 +37,33 @@ class DBCon:
         self.connection = engine.connect()
 
     def get_tables(self):
-        ''' Get an array of table names for this database '''
+        """ Get an array of table names for this database """
         return self.inspector.get_table_names()
 
     def get_table_count(self, table):
-        ''' Get the row count given a table name '''
+        """ Get the row count given a table name """
         table_obj = Table(table, self.metadata, autoload=True)
         sel = select([func.count()]).select_from(table_obj)
         records = self.connection.execute(sel)
         return records.first()[0]
 
     def get_column_names(self, table):
-        ''' Get all column names given a table name '''
+        """ Get all column names given a table name """
         cols = []
         for c in self.inspector.get_columns(table):
             cols.append(c['name'])
         return cols
 
     def get_columns(self, table, names):
-        ''' Get column objects given table name and column names '''
+        """ Get column objects given table name and column names """
         table_obj = Table(table, self.metadata, autoload=True)
         return [getattr(table_obj.c, fn) for fn in names]
 
     def get_table_data(self, table, fields, opts):
-        '''
+        """
         Return a result object given a table name, field string and
         option string
-        ''''
+        """
         sel = self.get_select(table, fields)
         ordering, limit, offset = self.parse_query_opts(opts)
 
@@ -76,7 +77,7 @@ class DBCon:
         return self.connection.execute(sel)
 
     def get_select(self, table, fields):
-        ''' Return a select query object given table name and field names. '''
+        """ Return a select query object given table name and field names. """
         if fields == "*":
             names = self.get_column_names(table)
         else:
@@ -84,11 +85,11 @@ class DBCon:
         return select(self.get_columns(table, names))
 
     def parse_orderby(self, exp):
-        '''
+        """
         Parse order by expression of the form <col>:(a|d) where <col> is the
         table column name and a=ascending, d=descending. Return an array
         of clauses returned by asc() or desc()
-        '''
+        """
         ob_clause = None
         m = re.search("^(\w+):(a|d)", exp)
         if m:
@@ -96,11 +97,11 @@ class DBCon:
         return ob_clause
 
     def parse_limit(self, exp):
-        '''
+        """
         Parse limit expression of the form limit:#[:#] where the first # is
         the limit and the second # is the optional offset. Return a
         (limit, offset) tuple with parsed values or Nones.
-        '''
+        """
         limit, offset = None, None
         m = re.search("^limit:(\d+)(:(\d+))?", exp)
         if m:
@@ -110,10 +111,10 @@ class DBCon:
         return limit, offset
 
     def parse_query_opts(self, opts):
-        '''
+        """
         Parse query options from URL. Either orderby or limit/offset
         expressions. Parsing stops after the first limit expression found.
-        '''
+        """
         ordering = []
         limit, offset = None, None
         if opts is not None:
@@ -131,17 +132,17 @@ class DBCon:
 
 
 def row_as_csv(row):
-    ''' Return a csv string from iterable row '''
+    """ Return a csv string from iterable row """
     si = io.StringIO()
     csv.writer(si, quoting=csv.QUOTE_NONNUMERIC).writerow(row)
     return si.getvalue()
 
 
 def csv_generator(results):
-    '''
+    """
     Create generator for returning csv formatted query results for use
     in streamed response
-    '''
+    """
     def stream():
         yield row_as_csv(results.keys())
         for row in results:
