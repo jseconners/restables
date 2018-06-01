@@ -6,7 +6,7 @@ from flask import Flask, jsonify, g, stream_with_context, Response
 app = Flask(__name__)
 
 # database connection configs
-CONFIG_FILE = os.path.join(app.root_path, '..', 'config.yaml')
+CONFIG_FILE = os.path.join(app.root_path, 'config.yaml')
 
 
 @app.before_request
