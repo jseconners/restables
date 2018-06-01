@@ -8,6 +8,25 @@ from sqlalchemy.engine import reflection
 from sqlalchemy import Table, func
 
 
+def row_as_csv(row):
+    """ Return a csv string from iterable row """
+    si = io.StringIO()
+    csv.writer(si, quoting=csv.QUOTE_NONNUMERIC).writerow(row)
+    return si.getvalue()
+
+
+def csv_generator(results):
+    """
+    Create generator for returning csv formatted query results for use
+    in streamed response
+    """
+    def stream():
+        yield row_as_csv(results.keys())
+        for row in results:
+            yield row_as_csv(row)
+    return stream
+
+
 class DBCon:
     """
     Database connection object with query and reflection utilities
@@ -129,22 +148,3 @@ class DBCon:
                     break
 
         return (ordering, limit, offset)
-
-
-def row_as_csv(row):
-    """ Return a csv string from iterable row """
-    si = io.StringIO()
-    csv.writer(si, quoting=csv.QUOTE_NONNUMERIC).writerow(row)
-    return si.getvalue()
-
-
-def csv_generator(results):
-    """
-    Create generator for returning csv formatted query results for use
-    in streamed response
-    """
-    def stream():
-        yield row_as_csv(results.keys())
-        for row in results:
-            yield row_as_csv(row)
-    return stream
