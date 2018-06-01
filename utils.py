@@ -34,6 +34,7 @@ class DBCon:
 
     # supported databases
     DIALECTS = {
+        # MySQL database via the MySQL Connector/Python driver
         'mysql': 'mysql+mysqlconnector'
     }
 
@@ -42,7 +43,7 @@ class DBCon:
         self.connect_db()
 
     def connect_db(self):
-        """ Create database connection and associated properties """
+        """ Create database connection and set associated properties """
         conn_str = "{}://{}:{}@{}:{}/{}"
         engine = create_engine(conn_str.format(
             self.DIALECTS[self.params['dialect']],
