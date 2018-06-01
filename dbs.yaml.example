@@ -1,10 +1,7 @@
-
 # Database configuration(s)
-# Add additional database connection subsets to the "databases" set
 #
-
-# The REST API uses these keys below, instead of the actual database name
-# e.g, http://example.com/dblabel1/<tablename>/<col1>,<col2>,...
+# The REST API uses these top-level keys below, instead of the actual
+# database name, e.g, http://example.com/dblabel1/<tablename>/<col1>,<col2>,...
 
 dblabel1:
     dialect: mysql
@@ -14,7 +11,7 @@ dblabel1:
     database: dbname
     port: 3306
 
-# Specify any number of databases ...
+# Specify any number of database connections using different labels
 dblabel2:
     dialect: mysql
     user: username2
