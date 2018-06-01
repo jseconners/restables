@@ -32,7 +32,7 @@ class DBCon:
     Database connection object with query and reflection utilities
     """
 
-    # supported dialects
+    # supported databases
     DIALECTS = {
         'mysql': 'mysql+mysqlconnector'
     }
