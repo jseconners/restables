@@ -22,7 +22,7 @@ def db_list():
 @app.route('/<connection_name>', methods=['GET'])
 def db_info(connection_name):
     """ Return a list of tables for this connection/database """
-    db = utils.DBCon(g._dbconfigs[connection_name])
+    db = utils.get_db(connection_name)
     info = {
         'tables': db.get_tables()
     }
@@ -32,7 +32,7 @@ def db_info(connection_name):
 @app.route('/<connection_name>/<table>', methods=['GET'])
 def table_info(connection_name, table):
     """ Return table info, i.e. columns and row count """
-    db = utils.DBCon(g._dbconfigs[connection_name])
+    db = utils.get_db(connection_name, table)
     info = {
         'columns': db.get_column_names(table),
         'rows': db.get_table_count(table)
@@ -47,8 +47,7 @@ def table_data(connection_name, table, fields, opts):
     Return plain/text CSV for table data, with specified field list and
     options list
     """
-    db = utils.DBCon(g._dbconfigs[connection_name])
-
+    db = utils.get_db(connection_name, table)
     results = db.get_table_data(table, fields, opts)
 
     # create csv generator for results

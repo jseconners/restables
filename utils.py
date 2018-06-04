@@ -2,10 +2,25 @@ import re
 import csv
 import io
 
+from flask import abort, g
+
 from sqlalchemy import MetaData, create_engine, desc, asc
 from sqlalchemy.sql import select
 from sqlalchemy.engine import reflection
 from sqlalchemy import Table, func
+
+
+def get_db(connection_name, table_name=None):
+    """ Get a DBCon object and abort if connection or table does not exist """
+    if connection_name not in g._dbconfigs:
+        abort(404, "Database not found")
+
+    db = DBCon(g._dbconfigs[connection_name])
+    # non-viewable tables reported as not-found
+    if table_name is not None:
+        if not db.table_is_viewable(table_name):
+            abort(404, "Table not found")
+    return db
 
 
 def row_as_csv(row):
@@ -42,6 +57,21 @@ class DBCon:
         self.params = params
         self.connect_db()
 
+        # table access params
+        self.show_tables = params.get('show_tables', None)
+        self.hide_tables = params.get('hide_tables', [])
+
+    def table_is_viewable(self, table_name):
+        """ Determine if table is viewable """
+        # hiding overrides showing
+        if table_name in self.hide_tables:
+            return False
+        # all tables shown if not specified
+        if self.show_tables is None:
+            return True
+        else:
+            return table_name in self.show_tables
+
     def connect_db(self):
         """ Create database connection and set associated properties """
         conn_str = "{}://{}:{}@{}:{}/{}"
@@ -58,7 +88,11 @@ class DBCon:
 
     def get_tables(self):
         """ Get an array of table names for this database """
-        return self.inspector.get_table_names()
+        tables = []
+        for t in self.inspector.get_table_names():
+            if self.table_is_viewable(t):
+                tables.append(t)
+        return tables
 
     def get_table_count(self, table):
         """ Get the row count given a table name """
