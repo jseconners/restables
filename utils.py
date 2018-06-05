@@ -86,40 +86,39 @@ class DBCon:
         self.inspector = reflection.Inspector.from_engine(self.engine)
         self.connection = engine.connect()
 
-    def get_tables(self):
-        """ Get an array of table names for this database """
+    def list_tables(self):
+        """ Get an list of table names for this database """
         tables = []
         for t in self.inspector.get_table_names():
             if self.table_is_viewable(t):
                 tables.append(t)
         return tables
 
-    def get_table_count(self, table):
+    def get_table_count(self, table_name):
         """ Get the row count given a table name """
-        table_obj = Table(table, self.metadata, autoload=True)
+        table_obj = Table(table_name, self.metadata, autoload=True)
         sel = select([func.count()]).select_from(table_obj)
         records = self.connection.execute(sel)
         return records.first()[0]
 
-    def get_column_names(self, table):
-        """ Get all column names given a table name """
+    def get_columns(self, table_name):
+        """ Get all column objects given a table name """
         cols = []
-        for c in self.inspector.get_columns(table):
-            cols.append(c['name'])
+        for c in self.inspector.get_columns(table_name):
+            cols.append(c)
         return cols
 
-    def get_columns(self, table, names):
-        """ Get column objects given table name and column names """
-        table_obj = Table(table, self.metadata, autoload=True)
-        return [getattr(table_obj.c, fn) for fn in names]
-
-    def get_table_data(self, table, fields, opts):
+    def get_table_data(self, table_name, field_str, opt_str):
         """
         Return a result object given a table name, field string and
         option string
         """
-        sel = self.get_select(table, fields)
-        ordering, limit, offset = self.parse_query_opts(opts)
+        # set the current table for this query
+        self.query_table = Table(table_name, self.metadata, autoload=True)
+
+        # get select, ordering, limit and offset
+        sel = select(self.__parse_field_str(field_str))
+        ordering, limit, offset = self.__parse_query_opts(opt_str)
 
         if len(ordering):
             sel = sel.order_by(*ordering)
@@ -130,15 +129,41 @@ class DBCon:
 
         return self.connection.execute(sel)
 
-    def get_select(self, table, fields):
-        """ Return a select query object given table name and field names. """
-        if fields == "*":
-            names = self.get_column_names(table)
-        else:
-            names = [c.strip() for c in fields.split(",")]
-        return select(self.get_columns(table, names))
+    def __parse_field_str(self, field_str):
+        """ Parse field names from field string """
+        if field_str == "*":
+            return self.get_columns(self.query_table)
 
-    def parse_orderby(self, exp):
+        columns = []
+        for fn in [c.strip() for c in field_str.split(",")]:
+            if fn not in self.query_table.c:
+                abort(400, "Invalid column specified in select: {}".format(fn))
+            columns.append(self.query_table.c[fn])
+        return columns
+
+    def __parse_query_opts(self, opts):
+        """
+        Parse query options from URL. Either orderby or limit/offset
+        expressions. Parsing stops after the first limit expression found.
+        """
+        ordering = []
+        limit, offset = None, None
+        if opts is not None:
+            for op in [op.strip() for op in opts.split(",")]:
+                ob_clause = self.__parse_orderby(op)
+                limit, offset = self.__parse_limit(op)
+
+                if ob_clause is not None:
+                    ordering.append(ob_clause)
+                    continue
+                if limit is not None:
+                    break
+                else:
+                    abort(400, "Invalid option specified: {}".format(op))
+
+        return (ordering, limit, offset)
+
+    def __parse_orderby(self, exp):
         """
         Parse order by expression of the form <col>:(a|d) where <col> is the
         table column name and a=ascending, d=descending. Return an array
@@ -147,10 +172,13 @@ class DBCon:
         ob_clause = None
         m = re.search("^(\w+):(a|d)", exp)
         if m:
-            ob_clause = {'a': asc, 'd': desc}[m.group(2)](m.group(1))
+            field_name = m.group(1)
+            if field_name not in self.query_table.c:
+                abort(400, "Invalid field specified: {}".format(field_name))
+            ob_clause = {'a': asc, 'd': desc}[m.group(2)](field_name)
         return ob_clause
 
-    def parse_limit(self, exp):
+    def __parse_limit(self, exp):
         """
         Parse limit expression of the form limit:#[:#] where the first # is
         the limit and the second # is the optional offset. Return a
@@ -163,23 +191,3 @@ class DBCon:
             if m.group(3):
                 offset = int(m.group(3))
         return limit, offset
-
-    def parse_query_opts(self, opts):
-        """
-        Parse query options from URL. Either orderby or limit/offset
-        expressions. Parsing stops after the first limit expression found.
-        """
-        ordering = []
-        limit, offset = None, None
-        if opts is not None:
-            for op in [op.strip() for op in opts.split(",")]:
-                ob_clause = self.parse_orderby(op)
-                limit, offset = self.parse_limit(op)
-
-                if ob_clause is not None:
-                    ordering.append(ob_clause)
-                    continue
-                if limit is not None:
-                    break
-
-        return (ordering, limit, offset)

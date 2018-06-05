@@ -19,35 +19,35 @@ def db_list():
     return jsonify(list(available_connections))
 
 
-@app.route('/<connection_name>', methods=['GET'])
-def db_info(connection_name):
+@app.route('/<connection>', methods=['GET'])
+def db_info(connection):
     """ Return a list of tables for this connection/database """
-    db = utils.get_db(connection_name)
+    db = utils.get_db(connection)
     info = {
-        'tables': db.get_tables()
+        'tables': db.list_tables()
     }
     return jsonify(info)
 
 
-@app.route('/<connection_name>/<table>', methods=['GET'])
-def table_info(connection_name, table):
+@app.route('/<connection>/<table>', methods=['GET'])
+def table_info(connection, table):
     """ Return table info, i.e. columns and row count """
-    db = utils.get_db(connection_name, table)
+    db = utils.get_db(connection, table)
     info = {
-        'columns': db.get_column_names(table),
+        'columns': [c['name'] for c in db.get_columns(table)],
         'rows': db.get_table_count(table)
     }
     return jsonify(info)
 
 
-@app.route('/<connection_name>/<table>/<fields>', defaults={'opts': None})
-@app.route('/<connection_name>/<table>/<fields>/<opts>', methods=['GET'])
-def table_data(connection_name, table, fields, opts):
+@app.route('/<connection>/<table>/<fields>', defaults={'opts': None})
+@app.route('/<connection>/<table>/<fields>/<opts>', methods=['GET'])
+def table_data(connection, table, fields, opts):
     """
     Return plain/text CSV for table data, with specified field list and
     options list
     """
-    db = utils.get_db(connection_name, table)
+    db = utils.get_db(connection, table)
     results = db.get_table_data(table, fields, opts)
 
     # create csv generator for results
