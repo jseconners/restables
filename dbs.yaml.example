@@ -10,6 +10,7 @@ dblabel1:
     host: example.com
     database: dbname
     port: 3306
+    show_tables: [table_1, table_2]
 
 # Specify any number of database connections using different labels
 dblabel2:
@@ -19,3 +20,4 @@ dblabel2:
     host: example2.com
     database: dbname2
     port: 3306
+    hide_tables: [table_x]
