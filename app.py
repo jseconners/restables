@@ -1,6 +1,7 @@
 import yaml
 import utils
-from flask import Flask, jsonify, g, stream_with_context, Response
+from db import DBConError
+from flask import Flask, jsonify, g, stream_with_context, Response, abort
 
 app = Flask(__name__)
 
@@ -48,7 +49,10 @@ def table_data(connection, table, fields, opts):
     options list
     """
     db = utils.get_db(connection, table)
-    results = db.get_table_data(table, fields, opts)
+    try:
+        results = db.get_table_data(table, fields, opts)
+    except DBConError as db_error:
+        abort(400, db_error.message)
 
     # create csv generator for results
     streamer = utils.csv_generator(results)
