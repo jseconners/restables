@@ -13,7 +13,7 @@ class DBCon:
     # supported databases
     DIALECTS = {
         # MySQL database via the MySQL Connector/Python driver
-        'mysql': 'mysql+mysqlconnector'
+        'mysql': 'mysql+pymysql'
     }
 
     def __init__(self, params):
@@ -38,10 +38,15 @@ class DBCon:
     def connect_db(self):
         """ Create database connection and set associated properties """
         conn_str = "{}://{}:{}@{}:{}/{}"
+        # optional charset param
+        if 'charset' in self.params:
+            conn_str += "?charset={}".format(self.params['charset'])
         engine = create_engine(conn_str.format(
             self.DIALECTS[self.params['dialect']],
-            self.params['user'], self.params['password'],
-            self.params['host'], self.params['port'],
+            self.params['user'], 
+            self.params['password'],
+            self.params['host'], 
+            self.params['port'],
             self.params['database']
         ))
         self.engine = engine
