@@ -1,9 +1,9 @@
 [tool.poetry]
-name = "restables"
+name = "tdvr-python"
 version = "0.1.0"
-description = "Database table micro-service with column select, limiting and ordering"
+description = "REST microservice for relational DB table data viewing"
 authors = ["James <jseconners@gmail.com>"]
-license = "mIT"
+license = "MIT"
 
 [tool.poetry.dependencies]
 python = "^3.7"
@@ -13,6 +13,7 @@ pyaml = "^19.12.0"
 PyMySQL = "^0.9.3"
 
 [tool.poetry.dev-dependencies]
+pylint = "^2.4.4"
 
 [build-system]
 requires = ["poetry>=0.12"]
