@@ -10,7 +10,7 @@ app = Flask(__name__)
 def load_dbconfigs():
     """ Load database configurations """
     with app.open_instance_resource('dbs.yaml') as f:
-        g._dbconfigs = yaml.load(f)
+        g._dbconfigs = yaml.load(f, Loader=yaml.FullLoader)
 
 
 @app.route('/')
@@ -35,7 +35,7 @@ def table_info(connection, table):
     """ Return table info, i.e. columns and row count """
     db = utils.get_db(connection, table)
     info = {
-        'columns': [c['name'] for c in db.get_columns(table)],
+        'columns': db.get_column_names(table),
         'rows': db.get_table_count(table)
     }
     return jsonify(info)

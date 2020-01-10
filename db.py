@@ -1,8 +1,10 @@
 import re
 from sqlalchemy import MetaData, create_engine, desc, asc
-from sqlalchemy.sql import select
+from sqlalchemy.sql import select, text
 from sqlalchemy.engine import reflection
 from sqlalchemy import Table, func
+
+import sys
 
 
 class DBCon:
@@ -69,12 +71,9 @@ class DBCon:
         records = self.connection.execute(sel)
         return records.first()[0]
 
-    def get_columns(self, table_name):
+    def get_column_names(self, table_name):
         """ Get all column objects given a table name """
-        cols = []
-        for c in self.inspector.get_columns(table_name):
-            cols.append(c)
-        return cols
+        return [c['name'] for c in self.inspector.get_columns(table_name)]
 
     def get_table_data(self, table_name, field_str, opt_str):
         """
@@ -82,7 +81,7 @@ class DBCon:
         option string
         """
         # set the current table for this query
-        self.query_table = Table(table_name, self.metadata, autoload=True)
+        self.t = Table(table_name, self.metadata, autoload=True)
 
         # get select, ordering, limit and offset
         sel = select(self.__parse_field_str(field_str))
@@ -99,15 +98,18 @@ class DBCon:
 
     def __parse_field_str(self, field_str):
         """ Parse field names from field string """
+        select_columns = []
+        column_names = self.get_column_names(self.t.name)
+        
         if field_str == "*":
-            return self.get_columns(self.query_table)
-
-        columns = []
-        for fn in [c.strip() for c in field_str.split(",")]:
-            if fn not in self.query_table.c:
-                raise ColumnError(fn)
-            columns.append(self.query_table.c[fn])
-        return columns
+            for c in column_names:
+                select_columns.append(self.t.c[c])
+        else:
+            for fn in [c.strip() for c in field_str.split(",")]:
+                if fn not in column_names:
+                    raise ColumnError(fn)
+                select_columns.append(self.t.c[fn])
+        return select_columns
 
     def __parse_query_opts(self, opts):
         """
@@ -133,7 +135,7 @@ class DBCon:
 
     def __parse_orderby(self, exp):
         """
-        Parse order by expression of the form <col>:(a|d) where <col> is the
+        Parse order by expression of the form <col>:a|d where <col> is the
         table column name and a=ascending, d=descending. Return an array
         of clauses returned by asc() or desc()
         """
@@ -141,7 +143,7 @@ class DBCon:
         m = re.search("^(\w+):(a|d)", exp)
         if m:
             field_name = m.group(1)
-            if field_name not in self.query_table.c:
+            if field_name not in self.t.c:
                 raise ColumnError(field_name)
             ob_clause = {'a': asc, 'd': desc}[m.group(2)](field_name)
         return ob_clause
