@@ -85,14 +85,19 @@ class DBCon:
 
         # get select, ordering, limit and offset
         sel = select(self.__parse_field_str(field_str))
-        ordering, limit, offset = self.__parse_query_opts(opt_str)
 
-        if len(ordering):
-            sel = sel.order_by(*ordering)
-        if limit is not None:
-            sel = sel.limit(limit)
-        if offset is not None:
-            sel = sel.offset(offset)
+        # the option string can simple be distinct to return the distinct
+        # sets of specified fields
+        if opt_str is not None and opt_str == 'distinct':
+            sel = sel.distinct()
+        elif opt_str is not None:
+            ordering, limit, offset = self.__parse_query_opts(opt_str)
+            if len(ordering):
+                sel = sel.order_by(*ordering)
+            if limit is not None:
+                sel = sel.limit(limit)
+            if offset is not None:
+                sel = sel.offset(offset)
 
         return self.connection.execute(sel)
 
