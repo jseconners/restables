@@ -9,7 +9,7 @@
 # optional params
 #   charset, show_tables
 
-db1
+db1:
     dialect: mysql
     user: username
     password: secret
@@ -19,7 +19,7 @@ db1
     show_tables: [table_1, table_2]
     charset: utf8
 
-db2
+db2:
     dialect: mysql
     user: username2
     password: secret2
