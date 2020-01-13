@@ -2,6 +2,9 @@ FROM python:3.7
 
 LABEL maintainer="jseconners@gmail.com"
 
+RUN apt-get update && apt-get install -y \
+  gunicorn
+
 WORKDIR /tdvr-python
 COPY poetry.lock pyproject.toml ./
 
@@ -20,4 +23,4 @@ USER tdvr
 ENV FLASK_APP app.py
 
 EXPOSE 5000
-ENTRYPOINT ["flask", "run", "--host=0.0.0.0"]
+CMD ["gunicorn"  , "-b", "0.0.0.0:8080", "app:app"]

@@ -1,5 +1,6 @@
-import yaml
+
 import utils
+import yaml
 from db import DBConError
 from flask import Flask, jsonify, g, stream_with_context, Response, abort
 
@@ -61,3 +62,8 @@ def table_data(connection, table, fields, opts):
     res = Response(stream_with_context(streamer()))
     res.headers['Content-type'] = 'text/plain'
     return res
+
+
+# dev entry point
+if __name__ == "__main__":
+    app.run(host='0.0.0.0')
