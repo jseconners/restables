@@ -1,4 +1,5 @@
 import re
+import urllib.parse
 from sqlalchemy import MetaData, create_engine, desc, asc
 from sqlalchemy.sql import select, text
 from sqlalchemy.engine import reflection
@@ -46,7 +47,7 @@ class DBCon:
         engine = create_engine(conn_str.format(
             self.DIALECTS[self.params['dialect']],
             self.params['user'], 
-            self.params['password'],
+            urllib.parse.quote_plus(self.params['password']),
             self.params['host'], 
             self.params['port'],
             self.params['database']
